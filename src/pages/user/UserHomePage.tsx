@@ -1,89 +1,132 @@
 import {
   CalendarOutlined,
   ClockCircleOutlined,
-  ReadOutlined,
+  FileTextOutlined,
+  PlayCircleOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
-import { Card, Col, List, Row, Tag, Typography } from "antd";
+import { Button, Card, Empty, Skeleton, Space, Tag, Tooltip } from "antd";
+import { useNavigate } from "react-router-dom";
+import useSWR from "swr";
+import { getAvailableExamsApi } from "../../api/examApi";
 
-const nextClasses = [
-  {
-    id: "class-1",
-    title: "Toan tu duy nang cao",
-    time: "19:00 - 20:30",
-    date: "Thu 2, 27/04/2026",
-    teacher: "GV. Nguyen Hoang Anh",
-  },
-  {
-    id: "class-2",
-    title: "Tieng Anh giao tiep",
-    time: "20:45 - 22:00",
-    date: "Thu 4, 29/04/2026",
-    teacher: "GV. Le Minh Thu",
-  },
-];
+function formatDateTime(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleString("vi-VN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export default function UserHomePage() {
+  const navigate = useNavigate();
+  const { data: exams, isLoading, mutate } = useSWR(
+    "user:available-exams",
+    getAvailableExamsApi,
+    { revalidateOnFocus: false },
+  );
+
+  const handleStartExam = (examId: number) => {
+    // TODO: Navigate to exam taking page
+    console.log("Start exam:", examId);
+    // navigate(`/user/exam/${examId}`);
+  };
+
   return (
     <div className="space-y-6">
-      <Typography.Title level={2} className="mb-0 !text-2xl">
-        Tong quan hoc vien
-      </Typography.Title>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="m-0 text-2xl font-bold text-slate-900">
+            Đề thi có thể làm
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Danh sách các đề thi đã mở, bạn có thể bắt đầu làm bài
+          </p>
+        </div>
+        <Tooltip title="Làm mới">
+          <Button
+            icon={<ReloadOutlined />}
+            loading={isLoading}
+            onClick={() => void mutate()}
+          >
+            Làm mới
+          </Button>
+        </Tooltip>
+      </div>
 
-      <Row gutter={[16, 16]}>
-        <Col xs={24} md={8}>
-          <Card>
-            <Typography.Text type="secondary">
-              Khoa hoc dang hoc
-            </Typography.Text>
-            <Typography.Title level={3} className="!mb-0 !mt-2">
-              3 khoa
-            </Typography.Title>
-          </Card>
-        </Col>
-        <Col xs={24} md={8}>
-          <Card>
-            <Typography.Text type="secondary">Buoi hoc hom nay</Typography.Text>
-            <Typography.Title level={3} className="!mb-0 !mt-2">
-              2 buoi
-            </Typography.Title>
-          </Card>
-        </Col>
-        <Col xs={24} md={8}>
-          <Card>
-            <Typography.Text type="secondary">Ti le chuyen can</Typography.Text>
-            <Typography.Title level={3} className="!mb-0 !mt-2">
-              96%
-            </Typography.Title>
-          </Card>
-        </Col>
-      </Row>
-
-      <Card title="Lich hoc sap toi" extra={<Tag color="blue">User role</Tag>}>
-        <List
-          dataSource={nextClasses}
-          renderItem={(item) => (
-            <List.Item>
-              <List.Item.Meta
-                avatar={<ReadOutlined className="text-lg text-blue-500" />}
-                title={item.title}
-                description={
-                  <div className="space-y-1 text-slate-600">
-                    <div className="flex items-center gap-2">
-                      <CalendarOutlined />
-                      <span>{item.date}</span>
+      {/* Exams list */}
+      {isLoading ? (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <Skeleton active paragraph={{ rows: 2 }} />
+            </Card>
+          ))}
+        </div>
+      ) : !exams || exams.length === 0 ? (
+        <Card>
+          <Empty description="Chưa có đề thi nào khả dụng" />
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {exams.map((exam) => (
+            <Card
+              key={exam.id}
+              className="transition-shadow hover:shadow-md"
+              styles={{
+                body: { padding: "20px" },
+              }}
+            >
+              <div className="flex flex-col gap-3">
+                {/* Title */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-2">
+                    <FileTextOutlined className="mt-1 text-lg text-blue-500" />
+                    <div>
+                      <h3 className="m-0 text-base font-semibold text-slate-900">
+                        {exam.title}
+                      </h3>
+                      {exam.description && (
+                        <p className="mt-1 text-xs text-slate-500 line-clamp-2">
+                          {exam.description}
+                        </p>
+                      )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <ClockCircleOutlined />
-                      <span>{item.time}</span>
-                    </div>
-                    <div>{item.teacher}</div>
                   </div>
-                }
-              />
-            </List.Item>
-          )}
-        />
-      </Card>
+                  <Tag color="green">Khả dụng</Tag>
+                </div>
+
+                {/* Info */}
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
+                  <Space size={4}>
+                    <ClockCircleOutlined />
+                    <span>{exam.duration} phút</span>
+                  </Space>
+                  <Space size={4}>
+                    <CalendarOutlined />
+                    <span>Mở: {formatDateTime(exam.startDate)}</span>
+                  </Space>
+                </div>
+
+                {/* Action */}
+                <div className="flex justify-end border-t border-slate-100 pt-3">
+                  <Button
+                    type="primary"
+                    icon={<PlayCircleOutlined />}
+                    onClick={() => handleStartExam(exam.id)}
+                  >
+                    Thi ngay
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

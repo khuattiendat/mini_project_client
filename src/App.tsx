@@ -1,6 +1,8 @@
 import { Spin } from "antd";
 import { useEffect, useRef } from "react";
 import { BrowserRouter } from "react-router-dom";
+import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
+import { SWRConfig } from "swr";
 import { useAuth } from "./auth/useAuth";
 import AppRouter from "./router/AppRouter";
 
@@ -26,9 +28,21 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
-      <AppRouter />
-    </BrowserRouter>
+    <SWRConfig
+      value={{
+        revalidateOnFocus: false,
+        revalidateIfStale: true,
+        dedupingInterval: 2000,
+        keepPreviousData: true,
+        shouldRetryOnError: false,
+      }}
+    >
+      <BrowserRouter>
+        <NuqsAdapter>
+          <AppRouter />
+        </NuqsAdapter>
+      </BrowserRouter>
+    </SWRConfig>
   );
 }
 

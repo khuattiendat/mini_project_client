@@ -48,3 +48,22 @@ export async function getMeApi(): Promise<AuthUser> {
   const { data } = await apiClient.get<ApiEnvelope<AuthUser>>("/auth/me");
   return data.data;
 }
+
+export async function updateProfileApi(
+  fullName: string,
+): Promise<AuthUser> {
+  const { data } = await apiClient.patch<ApiEnvelope<AuthUser>>("/auth/me", {
+    fullName,
+  });
+  return data.data;
+}
+
+export async function changePasswordApi(
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  await apiClient.post("/auth/change-password", {
+    currentPassword,
+    newPassword,
+  });
+}

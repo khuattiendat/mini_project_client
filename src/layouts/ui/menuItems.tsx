@@ -1,6 +1,7 @@
 import {
   DashboardOutlined,
   FileTextOutlined,
+  MessageOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
@@ -15,6 +16,11 @@ export const menuItems: MenuProps["items"] = [
     key: "/admin/exams",
     icon: <FileTextOutlined />,
     label: "Quản lý đề thi",
+  },
+  {
+    key: "/admin/questions",
+    icon: <MessageOutlined />,
+    label: "Quản lý câu hỏi",
   },
   {
     key: "/admin/users",

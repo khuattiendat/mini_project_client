@@ -68,14 +68,14 @@ export default function QuestionsPage() {
 
           {normalizedLockedExamId !== undefined ? (
             <div className="flex gap-2">
-              <Button>
-                <Link to={`/admin/exams/${normalizedLockedExamId}/preview`}>
+              <Link to={`/admin/exams/${normalizedLockedExamId}/preview`}>
+                <Button>
                   Preview đề thi
-                </Link>
-              </Button>
-              <Button>
-                <Link to="/admin/exams">Quay lại danh sách đề thi</Link>
-              </Button>
+                </Button>
+              </Link>
+              <Link to="/admin/exams">
+                <Button> Quay lại danh sách đề thi</Button>
+              </Link>
             </div>
           ) : null}
         </div>

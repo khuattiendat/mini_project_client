@@ -11,7 +11,9 @@ import {
 import { Badge, Button, Card, Empty, Skeleton, Space, Table, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import useSWR from "swr";
-import { getMyAttemptsApi, type UserAttempt } from "../../api/examApi";
+import { getMyAttemptsApi } from "../../api/examApi";
+import type { UserAttempt } from "../../types/exam";
+import { formatDateTime } from "../../lib/utils";
 
 const STATUS_CONFIG: Record<
   string,
@@ -43,18 +45,6 @@ const STATUS_CONFIG: Record<
     icon: <CloseCircleOutlined />,
   },
 };
-
-function formatDateTime(dateString: string | null): string {
-  if (!dateString) return "—";
-  const date = new Date(dateString);
-  return date.toLocaleString("vi-VN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 export default function UserHistoryPage() {
   const { data: attempts, isLoading, mutate } = useSWR(

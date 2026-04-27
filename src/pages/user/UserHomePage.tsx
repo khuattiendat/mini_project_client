@@ -9,17 +9,7 @@ import { Button, Card, Empty, Skeleton, Space, Tag, Tooltip } from "antd";
 import { useNavigate } from "react-router-dom";
 import useSWR from "swr";
 import { getAvailableExamsApi } from "../../api/examApi";
-
-function formatDateTime(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleString("vi-VN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+import { formatDateTime } from "../../lib/utils";
 
 export default function UserHomePage() {
   const navigate = useNavigate();

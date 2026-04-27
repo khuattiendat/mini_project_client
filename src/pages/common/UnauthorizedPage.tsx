@@ -15,10 +15,10 @@ export default function UnauthorizedPage() {
     <Result
       status="403"
       title="403"
-      subTitle="Ban khong co quyen truy cap trang nay."
+      subTitle="Bạn không có quyền truy cập trang này."
       extra={
         <Button type="primary" onClick={onGoHome}>
-          Quay ve trang chinh
+          Quay về trang chính
         </Button>
       }
     />

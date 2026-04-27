@@ -1,11 +1,12 @@
-import { Form, Input, InputNumber, Modal, Switch } from "antd";
+import { DatePicker, Form, Input, InputNumber, Modal, Switch } from "antd";
 import type { FormInstance } from "antd/es/form";
+import type { Dayjs } from "dayjs";
 
 export interface ExamFormValues {
   title: string;
   description?: string;
   duration: number;
-  startDate: string;
+  startDate: Dayjs;
   isPublic: boolean;
 }
 
@@ -75,7 +76,12 @@ export function ExamFormModal({
             { required: true, message: "Vui lòng chọn thời gian bắt đầu" },
           ]}
         >
-          <Input type="datetime-local" />
+          <DatePicker
+            showTime={{ format: "HH:mm" }}
+            format="DD/MM/YYYY HH:mm"
+            placeholder="Chọn ngày và giờ"
+            className="w-full"
+          />
         </Form.Item>
 
         <Form.Item

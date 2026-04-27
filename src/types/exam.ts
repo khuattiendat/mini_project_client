@@ -59,4 +59,32 @@ export interface AssignedUser {
   status: string;
 }
 
+export interface DashboardStats {
+  overview: {
+    totalUsers: number;
+    totalExams: number;
+    totalQuestions: number;
+    totalAttempts: number;
+  };
+  attemptsByStatus: Array<{ status: string; count: number }>;
+  topExams: Array<{ examId: number; examTitle: string; attemptCount: number }>;
+  attemptsTimeline: Array<{ date: string; count: number }>;
+  violations: {
+    totalViolations: number;
+    byType: Array<{ type: string; count: number }>;
+  };
+}
+
+export interface UserAttempt {
+  id: number;
+  examId: number;
+  examTitle: string;
+  attemptNo: number;
+  status: string;
+  startedAt: string | null;
+  submittedAt: string | null;
+  endedAt: string | null;
+  createdAt: string;
+}
+
 export type ExamEnvelope<T> = ApiEnvelope<T>;

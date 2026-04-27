@@ -9,6 +9,12 @@ import {
 import useSWR from "swr";
 import useSWRMutation from "swr/mutation";
 import { getApiErrorMessage } from "../../../../api/apiError";
+import {
+  createUserApi,
+  deleteUserApi,
+  getUsersApi,
+  updateUserApi,
+} from "../../../../api/userApi";
 import type {
   CreateUserPayload,
   UpdateUserPayload,
@@ -21,15 +27,20 @@ import {
   type UserRoleFilter,
   type UserStatusFilter,
 } from "../constants";
-import { isFormValidationError } from "../utils";
+import { isFormValidationError } from "../../../../lib/utils";
 import type { UserFormValues } from "../components/UserFormModal";
-import {
-  buildUsersListKey,
-  createUserRequest,
-  deleteUserRequest,
-  fetchUsersList,
-  updateUserRequest,
-} from "../users.api";
+
+const USERS_LIST_KEY = "users";
+
+function buildListKey(
+  page: number,
+  limit: number,
+  search: string,
+  role: string,
+  status: string,
+) {
+  return [USERS_LIST_KEY, page, limit, search, role, status] as const;
+}
 
 export function useUsersManagement() {
   const [form] = Form.useForm<UserFormValues>();
@@ -53,14 +64,7 @@ export function useUsersManagement() {
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
 
   const listKey = useMemo(
-    () =>
-      buildUsersListKey({
-        page,
-        limit,
-        search: search.trim() || undefined,
-        role: role === "all" ? undefined : role,
-        status: status === "all" ? undefined : status,
-      }),
+    () => buildListKey(page, limit, search.trim() || "", role, status),
     [limit, page, role, search, status],
   );
 
@@ -69,31 +73,40 @@ export function useUsersManagement() {
     isLoading: isUsersLoading,
     isValidating,
     mutate: mutateUsers,
-  } = useSWR(listKey, fetchUsersList, {
-    keepPreviousData: true,
-    revalidateOnFocus: false,
-    dedupingInterval: 2000,
-    onError: (error) => {
-      messageApi.error(getApiErrorMessage(error));
+  } = useSWR(
+    listKey,
+    ([, p, l, s, r, st]) =>
+      getUsersApi({
+        page: p,
+        limit: l,
+        search: s || undefined,
+        role: r === "all" ? undefined : (r as "admin" | "user"),
+        status: st === "all" ? undefined : (st as "active" | "inactive"),
+      }),
+    {
+      keepPreviousData: true,
+      revalidateOnFocus: false,
+      dedupingInterval: 2000,
+      onError: (error) => {
+        messageApi.error(getApiErrorMessage(error));
+      },
     },
-  });
+  );
 
   const { trigger: createUser, isMutating: isCreating } = useSWRMutation(
     "users:create",
-    async (_key, { arg }: { arg: CreateUserPayload }) => createUserRequest(arg),
+    async (_key, { arg }: { arg: CreateUserPayload }) => createUserApi(arg),
   );
 
   const { trigger: updateUser, isMutating: isUpdating } = useSWRMutation(
     "users:update",
-    async (
-      _key,
-      { arg }: { arg: { id: number; payload: UpdateUserPayload } },
-    ) => updateUserRequest(arg),
+    async (_key, { arg }: { arg: { id: number; payload: UpdateUserPayload } }) =>
+      updateUserApi(arg.id, arg.payload),
   );
 
   const { trigger: removeUserRequest, isMutating: isDeleting } = useSWRMutation(
     "users:delete",
-    async (_key, { arg }: { arg: number }) => deleteUserRequest(arg),
+    async (_key, { arg }: { arg: number }) => deleteUserApi(arg),
   );
 
   const users = useMemo(() => data?.items ?? [], [data]);

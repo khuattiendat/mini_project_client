@@ -12,6 +12,7 @@ import useSWR from "swr";
 import { getExamApi } from "../../api/examApi";
 import { getQuestionsApi } from "../../api/questionApi";
 import { formatDateTime } from "./questions/utils";
+import { RichContent } from "../../components/common/RichContent";
 
 const { Title, Text } = Typography;
 
@@ -227,10 +228,7 @@ export default function ExamPreviewPage() {
 
                 {/* Question content */}
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                  <div
-                    className="prose prose-sm max-w-none text-slate-800"
-                    dangerouslySetInnerHTML={{ __html: currentQuestion.content }}
-                  />
+                  <RichContent html={currentQuestion.content} />
                 </div>
               </Card>
 
@@ -268,10 +266,7 @@ export default function ExamPreviewPage() {
 
                         {/* Choice content */}
                         <div className="flex-1 pt-0.5">
-                          <div
-                            className="prose prose-sm max-w-none text-slate-800"
-                            dangerouslySetInnerHTML={{ __html: choice.content }}
-                          />
+                          <RichContent html={choice.content} />
                         </div>
 
                         {/* Correct badge */}

@@ -150,9 +150,13 @@ export default function ExamAssignPage() {
       <Card className="shadow-[0_1px_4px_rgba(15,23,42,0.06)]">
         {/* Header */}
         <div className="mb-6">
-          <Button icon={<ArrowLeftOutlined />} className="mb-3">
-            <Link to={`/admin/exams`}>Quay lại danh sách đề thi</Link>
-          </Button>
+          <Link to={`/admin/exams`}>
+
+            <Button icon={<ArrowLeftOutlined />} className="mb-3">
+              Quay lại danh sách đề thi
+            </Button>
+          </Link>
+
 
           {isExamLoading ? (
             <Skeleton active paragraph={{ rows: 1 }} title={{ width: 300 }} />
@@ -197,16 +201,17 @@ export default function ExamAssignPage() {
             className="overflow-hidden rounded-md"
           />
         )}
-      </Card>
+      </Card >
 
       {/* Assign modal */}
-      <Modal
+      < Modal
         title="Gán người dùng vào đề thi"
         open={modalOpen}
         onCancel={() => {
           setModalOpen(false);
           setSelectedUserIds([]);
-        }}
+        }
+        }
         onOk={() => void handleAssign()}
         confirmLoading={submitting}
         okText="Gán"
@@ -235,7 +240,7 @@ export default function ExamAssignPage() {
             </p>
           )}
         </div>
-      </Modal>
+      </Modal >
     </>
   );
 }

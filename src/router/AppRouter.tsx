@@ -7,7 +7,6 @@ import UserLayout from "../layouts/UserLayout";
 import PrivateRouter from "./PrivateRouter";
 import PublicRouter from "./PublicRouter";
 
-// Lazy-loaded pages
 const LoginPage = lazy(() => import("../pages/auth/LoginPage"));
 const RegisterPage = lazy(() => import("../pages/auth/RegisterPage"));
 const AdminDashboardPage = lazy(() => import("../pages/admin/AdminDashboardPage"));
@@ -22,8 +21,6 @@ const ExamAssignPage = lazy(() => import("../pages/admin/ExamAssignPage"));
 const UnauthorizedPage = lazy(() => import("../pages/common/UnauthorizedPage"));
 const UserHomePage = lazy(() => import("../pages/user/UserHomePage"));
 const UserHistoryPage = lazy(() => import("../pages/user/UserHistoryPage"));
-const UserProfilePage = lazy(() => import("../pages/user/UserProfilePage"));
-const UserChangePasswordPage = lazy(() => import("../pages/user/UserChangePasswordPage"));
 
 function PageLoader() {
   return (
@@ -76,8 +73,8 @@ export default function AppRouter() {
           <Route path="/user" element={<UserLayout />}>
             <Route index element={<UserHomePage />} />
             <Route path="history" element={<UserHistoryPage />} />
-            <Route path="profile" element={<UserProfilePage />} />
-            <Route path="change-password" element={<UserChangePasswordPage />} />
+            <Route path="profile" element={<ProfilePage />} />
+            <Route path="change-password" element={<ChangePasswordPage />} />
           </Route>
         </Route>
 

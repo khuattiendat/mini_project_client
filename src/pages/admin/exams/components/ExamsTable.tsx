@@ -108,18 +108,25 @@ export function ExamsTable({
     {
       title: "Thao tác nhanh",
       key: "links",
-      width: 160,
+      width: 180,
       render: (_, record) => (
-        <div className="flex flex-col gap-1">
-          <Link to={`/admin/exams/${record.id}/questions`} className="text-[#1677ff] text-xs">
-            Câu hỏi
+        <div className="flex flex-col gap-2">
+          <Link to={`/admin/exams/${record.id}/questions`}>
+            <Button size="small" type="primary" block>
+              Câu hỏi
+            </Button>
           </Link>
-          <Link to={`/admin/exams/${record.id}/preview`} className="text-[#16a34a] text-xs">
-            Preview
+
+          <Link to={`/admin/exams/${record.id}/preview`}>
+            <Button size="small" type="default" block >
+              Preview
+            </Button>
           </Link>
-          <Link to={`/admin/exams/${record.id}/assign`} className="text-[#7c3aed] text-xs">
-            <TeamOutlined className="mr-1" />
-            Gán user
+
+          <Link to={`/admin/exams/${record.id}/assign`}>
+            <Button size="small" type="dashed" icon={<TeamOutlined />} block >
+              Gán user
+            </Button>
           </Link>
         </div>
       ),

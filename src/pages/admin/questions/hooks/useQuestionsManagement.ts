@@ -5,13 +5,18 @@ import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import useSWR from "swr";
 import { getApiErrorMessage } from "../../../../api/apiError";
 import { getExamsApi } from "../../../../api/examApi";
+import {
+  deleteQuestionApi,
+  getQuestionsApi,
+} from "../../../../api/questionApi";
 import type { QuestionItem } from "../../../../types/question";
 import { DEFAULT_PAGE_SIZE } from "../constants";
-import {
-  buildQuestionsListKey,
-  deleteQuestionRequest,
-  fetchQuestionsList,
-} from "../questions.api";
+
+const QUESTIONS_LIST_KEY = "questions";
+
+function buildListKey(page: number, limit: number, search: string, examId: number | "all") {
+  return [QUESTIONS_LIST_KEY, page, limit, search, examId] as const;
+}
 
 interface UseQuestionsManagementOptions {
   lockedExamId?: number;
@@ -48,13 +53,7 @@ export function useQuestionsManagement({
   }, [examId, lockedExamId]);
 
   const listKey = useMemo(
-    () =>
-      buildQuestionsListKey({
-        page,
-        limit,
-        search: search.trim() || undefined,
-        examId: activeExamId,
-      }),
+    () => buildListKey(page, limit, search.trim() || "", activeExamId ?? "all"),
     [activeExamId, limit, page, search],
   );
 
@@ -63,14 +62,24 @@ export function useQuestionsManagement({
     isLoading: isQuestionsLoading,
     isValidating,
     mutate: mutateQuestions,
-  } = useSWR(listKey, fetchQuestionsList, {
-    keepPreviousData: true,
-    revalidateOnFocus: false,
-    dedupingInterval: 2000,
-    onError: (error) => {
-      messageApi.error(getApiErrorMessage(error));
+  } = useSWR(
+    listKey,
+    ([, p, l, s, eid]) =>
+      getQuestionsApi({
+        page: p,
+        limit: l,
+        search: s || undefined,
+        examId: eid === "all" ? undefined : eid,
+      }),
+    {
+      keepPreviousData: true,
+      revalidateOnFocus: false,
+      dedupingInterval: 2000,
+      onError: (error) => {
+        messageApi.error(getApiErrorMessage(error));
+      },
     },
-  });
+  );
 
   const {
     data: examsData,
@@ -139,7 +148,7 @@ export function useQuestionsManagement({
   const removeQuestion = useCallback(
     async (question: QuestionItem) => {
       try {
-        await deleteQuestionRequest(question.id);
+        await deleteQuestionApi(question.id);
         messageApi.success("Đã xoá câu hỏi");
 
         if (questions.length === 1 && page > 1) {

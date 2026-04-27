@@ -1,28 +1,30 @@
 import { Form, message } from "antd";
+import dayjs from "dayjs";
 import { useCallback, useMemo, useState } from "react";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import useSWR from "swr";
 import useSWRMutation from "swr/mutation";
 import { getApiErrorMessage } from "../../../../api/apiError";
+import {
+  createExamApi,
+  deleteExamApi,
+  getExamsApi,
+  updateExamApi,
+} from "../../../../api/examApi";
 import type {
   CreateExamPayload,
   ExamItem,
   UpdateExamPayload,
 } from "../../../../types/exam";
 import { DEFAULT_PAGE_SIZE } from "../constants";
-import {
-  buildExamsListKey,
-  createExamRequest,
-  deleteExamRequest,
-  fetchExamsList,
-  updateExamRequest,
-} from "../exams.api";
-import {
-  fromDateTimeLocalValue,
-  isFormValidationError,
-  toDateTimeLocalValue,
-} from "../utils";
+import { isFormValidationError } from "../../../../lib/utils";
 import type { ExamFormValues } from "../components/ExamFormModal";
+
+const EXAMS_LIST_KEY = "exams";
+
+function buildListKey(page: number, limit: number, search: string) {
+  return [EXAMS_LIST_KEY, page, limit, search] as const;
+}
 
 export function useExamsManagement() {
   const [form] = Form.useForm<ExamFormValues>();
@@ -43,12 +45,7 @@ export function useExamsManagement() {
   const [editingExam, setEditingExam] = useState<ExamItem | null>(null);
 
   const listKey = useMemo(
-    () =>
-      buildExamsListKey({
-        page,
-        limit,
-        search: search.trim() || undefined,
-      }),
+    () => buildListKey(page, limit, search.trim() || ""),
     [limit, page, search],
   );
 
@@ -57,7 +54,7 @@ export function useExamsManagement() {
     isLoading: isExamsLoading,
     isValidating,
     mutate: mutateExams,
-  } = useSWR(listKey, fetchExamsList, {
+  } = useSWR(listKey, ([, p, l, s]) => getExamsApi({ page: p, limit: l, search: s || undefined }), {
     keepPreviousData: true,
     revalidateOnFocus: false,
     dedupingInterval: 2000,
@@ -68,20 +65,18 @@ export function useExamsManagement() {
 
   const { trigger: createExam, isMutating: isCreating } = useSWRMutation(
     "exams:create",
-    async (_key, { arg }: { arg: CreateExamPayload }) => createExamRequest(arg),
+    async (_key, { arg }: { arg: CreateExamPayload }) => createExamApi(arg),
   );
 
   const { trigger: updateExam, isMutating: isUpdating } = useSWRMutation(
     "exams:update",
-    async (
-      _key,
-      { arg }: { arg: { id: number; payload: UpdateExamPayload } },
-    ) => updateExamRequest(arg),
+    async (_key, { arg }: { arg: { id: number; payload: UpdateExamPayload } }) =>
+      updateExamApi(arg.id, arg.payload),
   );
 
   const { trigger: removeExamRequest, isMutating: isDeleting } = useSWRMutation(
     "exams:delete",
-    async (_key, { arg }: { arg: number }) => deleteExamRequest(arg),
+    async (_key, { arg }: { arg: number }) => deleteExamApi(arg),
   );
 
   const exams = useMemo(() => data?.items ?? [], [data]);
@@ -94,7 +89,7 @@ export function useExamsManagement() {
       title: "",
       description: "",
       duration: 45,
-      startDate: "",
+      startDate: undefined,
       isPublic: false,
     });
     setIsModalOpen(true);
@@ -107,7 +102,7 @@ export function useExamsManagement() {
         title: exam.title,
         description: exam.description ?? "",
         duration: exam.duration,
-        startDate: toDateTimeLocalValue(exam.startDate),
+        startDate: dayjs(exam.startDate),
         isPublic: exam.isPublic,
       });
       setIsModalOpen(true);
@@ -131,7 +126,7 @@ export function useExamsManagement() {
           title: values.title,
           description: values.description?.trim() || null,
           duration: values.duration,
-          startDate: fromDateTimeLocalValue(values.startDate),
+          startDate: values.startDate.toISOString(),
           isPublic: values.isPublic,
         };
 
@@ -142,7 +137,7 @@ export function useExamsManagement() {
           title: values.title,
           description: values.description?.trim() || undefined,
           duration: values.duration,
-          startDate: fromDateTimeLocalValue(values.startDate),
+          startDate: values.startDate.toISOString(),
           isPublic: values.isPublic ?? false,
         };
 

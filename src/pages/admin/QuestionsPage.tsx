@@ -18,6 +18,7 @@ export default function QuestionsPage() {
     contextHolder,
     questions,
     loading,
+    loadingExams,
     searchKeyword,
     examFilter,
     examFilterOptions,
@@ -26,6 +27,7 @@ export default function QuestionsPage() {
     total,
     selectedExamTitle,
     showExamFilter,
+    onExamSearch,
     setPage,
     setPageSize,
     setSearchKeyword,
@@ -85,12 +87,14 @@ export default function QuestionsPage() {
           examFilter={examFilter}
           examOptions={examFilterOptions}
           showExamFilter={showExamFilter}
+          isExamsLoading={loadingExams}
           onSearchChange={(value) => {
             setSearchKeyword(value);
           }}
           onExamFilterChange={(value) => {
             setExamFilter(value);
           }}
+          onExamSearch={onExamSearch}
           onReset={resetFilters}
         />
 

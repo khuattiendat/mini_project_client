@@ -1,5 +1,5 @@
 import { message } from "antd";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import useSWR from "swr";
@@ -11,6 +11,7 @@ import {
 } from "../../../../api/questionApi";
 import type { QuestionItem } from "../../../../types/question";
 import { DEFAULT_PAGE_SIZE } from "../constants";
+import { useDebounce } from "../../../../hooks/useDebounce";
 
 const QUESTIONS_LIST_KEY = "questions";
 
@@ -27,6 +28,8 @@ export function useQuestionsManagement({
 }: UseQuestionsManagementOptions = {}) {
   const navigate = useNavigate();
   const [messageApi, contextHolder] = message.useMessage();
+  const [examSearch, setExamSearch] = useState("");
+  const debouncedExamSearch = useDebounce(examSearch);
 
   const [{ page, limit, search, examId }, setQueryStates] = useQueryStates(
     {
@@ -85,11 +88,9 @@ export function useQuestionsManagement({
     data: examsData,
     isLoading: isExamsLoading,
     mutate: mutateExams,
-  } = useSWR("questions:exam-options", () =>
-    getExamsApi({
-      page: 1,
-      limit: 1000,
-    }),
+  } = useSWR(
+    ["questions:exam-options", debouncedExamSearch],
+    ([, search]) => getExamsApi({ page: 1, limit: 20, search: search || undefined }),
   );
 
   const questions = useMemo(() => data?.items ?? [], [data]);
@@ -193,6 +194,7 @@ export function useQuestionsManagement({
     pageSize: limit,
     total,
     showExamFilter: lockedExamId === undefined,
+    onExamSearch: setExamSearch,
     setPage: (value: number) => {
       void setQueryStates({ page: value });
     },

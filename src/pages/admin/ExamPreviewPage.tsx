@@ -6,9 +6,10 @@ import {
   QuestionCircleOutlined,
 } from "@ant-design/icons";
 import { Alert, Badge, Button, Card, Empty, Skeleton, Tag, Typography } from "antd";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import useSWR from "swr";
+import useSWRInfinite from "swr/infinite";
 import { getExamApi } from "../../api/examApi";
 import { getQuestionsApi } from "../../api/questionApi";
 import { formatDateTime } from "./questions/utils";
@@ -25,6 +26,9 @@ const OPTION_COLORS = [
   "bg-pink-50 border-pink-200 text-pink-700",
   "bg-yellow-50 border-yellow-200 text-yellow-700",
 ];
+
+const PAGE_SIZE = 50;
+
 
 export default function ExamPreviewPage() {
   const { examId } = useParams();
@@ -43,22 +47,42 @@ export default function ExamPreviewPage() {
     ([, id]) => getExamApi(Number(id)),
   );
 
-  const { data: questionsData, isLoading: isQuestionsLoading } = useSWR(
-    normalizedExamId !== undefined
-      ? ["exam-preview:questions", normalizedExamId]
-      : null,
-    ([, id]) =>
-      getQuestionsApi({
-        page: 1,
-        limit: 1000,
-        examId: Number(id),
-      }),
+  const {
+    data: pages,
+    isLoading: isQuestionsLoading,
+    isValidating,
+    error,
+    setSize,
+  } = useSWRInfinite(
+    (pageIndex, previousPage) => {
+      if (normalizedExamId === undefined) return null;
+      if (previousPage && !previousPage.meta.hasNextPage) return null;
+      return ["exam-preview:questions", normalizedExamId, pageIndex + 1];
+    },
+    ([, id, page]) =>
+      getQuestionsApi({ page: Number(page), limit: PAGE_SIZE, examId: Number(id) }),
+    { revalidateFirstPage: false },
   );
 
-  const questions = (questionsData?.items ?? []).slice().sort((a, b) => {
-    if (a.orderIndex === b.orderIndex) return a.id - b.id;
-    return a.orderIndex - b.orderIndex;
-  });
+  const questions = (pages ?? [])
+    .flatMap((p) => p.items)
+    .slice()
+    .sort((a, b) => {
+      if (a.orderIndex === b.orderIndex) return a.id - b.id;
+      return a.orderIndex - b.orderIndex;
+    });
+
+  const totalItems = pages?.[0]?.meta.totalItems ?? 0;
+  const hasMore = questions.length < totalItems;
+
+  // Load next page when user is within 10 questions of the loaded end
+  useEffect(() => {
+    if (!hasMore || isValidating) return;
+    if (currentIndex >= questions.length - 10) {
+      setSize((s) => s + 1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIndex, questions.length, hasMore, isValidating]);
 
   if (normalizedExamId === undefined) {
     return (
@@ -71,6 +95,16 @@ export default function ExamPreviewPage() {
   }
 
   const currentQuestion = questions[currentIndex];
+
+  if (error) {
+    return (
+      <Alert
+        type="error"
+        message="Lỗi tải dữ liệu"
+        description="Đã xảy ra lỗi khi tải thông tin đề thi. Vui lòng thử lại sau."
+      />
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-100">
@@ -109,7 +143,7 @@ export default function ExamPreviewPage() {
                   )}
                   <span className="flex items-center gap-1">
                     <QuestionCircleOutlined />
-                    {questions.length} câu hỏi
+                    {totalItems} câu hỏi
                   </span>
                 </div>
               </div>
@@ -168,16 +202,21 @@ export default function ExamPreviewPage() {
                         key={q.id}
                         onClick={() => setCurrentIndex(idx)}
                         className={`flex h-8 w-8 items-center justify-center rounded-md text-xs font-semibold transition-all ${idx === currentIndex
-                            ? "bg-blue-600 text-white shadow"
-                            : hasCorrect
-                              ? "bg-green-100 text-green-700 hover:bg-green-200"
-                              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                          ? "bg-blue-600 text-white shadow"
+                          : hasCorrect
+                            ? "bg-green-100 text-green-700 hover:bg-green-200"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                           }`}
                       >
                         {idx + 1}
                       </button>
                     );
                   })}
+                  {hasMore && (
+                    <div className="col-span-5 mt-1 text-center text-xs text-slate-400">
+                      Đang tải thêm...
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -250,15 +289,15 @@ export default function ExamPreviewPage() {
                       <div
                         key={choice.id}
                         className={`flex items-start gap-3 rounded-xl border-2 p-4 transition-all ${choice.isCorrect
-                            ? "border-green-400 bg-green-50 shadow-sm"
-                            : "border-slate-200 bg-white"
+                          ? "border-green-400 bg-green-50 shadow-sm"
+                          : "border-slate-200 bg-white"
                           }`}
                       >
                         {/* Option label */}
                         <span
                           className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm font-bold ${choice.isCorrect
-                              ? "border-green-500 bg-green-500 text-white"
-                              : `${colorClass} border`
+                            ? "border-green-500 bg-green-500 text-white"
+                            : `${colorClass} border`
                             }`}
                         >
                           {label}
@@ -304,8 +343,8 @@ export default function ExamPreviewPage() {
                         key={absIdx}
                         onClick={() => setCurrentIndex(absIdx)}
                         className={`h-2 rounded-full transition-all ${absIdx === currentIndex
-                            ? "w-6 bg-blue-600"
-                            : "w-2 bg-slate-300"
+                          ? "w-6 bg-blue-600"
+                          : "w-2 bg-slate-300"
                           }`}
                       />
                     );

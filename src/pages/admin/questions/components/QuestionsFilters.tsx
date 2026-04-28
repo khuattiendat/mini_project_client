@@ -11,8 +11,10 @@ interface QuestionsFiltersProps {
   examFilter: string;
   examOptions: ExamOption[];
   showExamFilter?: boolean;
+  isExamsLoading?: boolean;
   onSearchChange: (value: string) => void;
   onExamFilterChange: (value: string) => void;
+  onExamSearch: (value: string) => void;
   onReset: () => void;
 }
 
@@ -21,8 +23,10 @@ export function QuestionsFilters({
   examFilter,
   examOptions,
   showExamFilter = true,
+  isExamsLoading = false,
   onSearchChange,
   onExamFilterChange,
+  onExamSearch,
   onReset,
 }: QuestionsFiltersProps) {
   return (
@@ -41,6 +45,11 @@ export function QuestionsFilters({
           onChange={onExamFilterChange}
           className="h-10!"
           style={{ width: 260 }}
+          showSearch
+          filterOption={false}
+          onSearch={onExamSearch}
+          loading={isExamsLoading}
+          notFoundContent={isExamsLoading ? "Đang tìm..." : "Không tìm thấy đề thi"}
           options={[{ value: "all", label: "Tất cả đề thi" }, ...examOptions]}
         />
       ) : null}

@@ -22,6 +22,7 @@ import {
 } from "../../api/questionApi";
 import { getApiErrorMessage } from "../../api/apiError";
 import { getExamsApi } from "../../api/examApi";
+import { useDebounce } from "../../hooks/useDebounce";
 import CustomEditor from "../../components/common/CustomEditor";
 import type {
   CreateQuestionPayload,
@@ -103,6 +104,7 @@ export default function QuestionEditorPage() {
   const [isQuestionEditorLoading, setIsQuestionEditorLoading] = useState(true);
   const [choiceCount, setChoiceCount] = useState(DEFAULT_CHOICE_COUNT);
   const [submitting, setSubmitting] = useState(false);
+  const [examSearch, setExamSearch] = useState("");
 
   const lockedExamId = examId ? Number.parseInt(examId, 10) : undefined;
   const normalizedLockedExamId =
@@ -113,8 +115,11 @@ export default function QuestionEditorPage() {
     parsedQuestionId !== undefined && !Number.isNaN(parsedQuestionId) ? parsedQuestionId : undefined;
   const isEditing = normalizedQuestionId !== undefined;
 
-  const { data: examsData } = useSWR("question-editor:exams", () =>
-    getExamsApi({ page: 1, limit: 1000 }),
+  const debouncedExamSearch = useDebounce(examSearch);
+
+  const { data: examsData, isLoading: isExamsLoading } = useSWR(
+    ["question-editor:exams", debouncedExamSearch],
+    ([, search]) => getExamsApi({ page: 1, limit: 20, search: search || undefined }),
   );
 
   const { data: questionData, isLoading: isQuestionLoading } = useSWR(
@@ -286,7 +291,10 @@ export default function QuestionEditorPage() {
                 placeholder="Chọn đề thi"
                 options={examOptions}
                 showSearch
-                optionFilterProp="label"
+                filterOption={false}
+                onSearch={setExamSearch}
+                loading={isExamsLoading}
+                notFoundContent={isExamsLoading ? "Đang tìm..." : "Không tìm thấy đề thi"}
               />
             </Form.Item>
 

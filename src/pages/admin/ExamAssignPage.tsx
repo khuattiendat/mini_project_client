@@ -31,6 +31,7 @@ import {
 import { getExamApi } from "../../api/examApi";
 import { getUsersApi } from "../../api/userApi";
 import { getApiErrorMessage } from "../../api/apiError";
+import { useDebounce } from "../../hooks/useDebounce";
 import type { AssignedUser } from "../../types/exam";
 
 const { Text } = Typography;
@@ -45,6 +46,7 @@ export default function ExamAssignPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [searchText, setSearchText] = useState("");
 
   const { data: exam, isLoading: isExamLoading } = useSWR(
     normalizedId ? ["exam-assign:exam", normalizedId] : null,
@@ -60,8 +62,11 @@ export default function ExamAssignPage() {
     ([, id]) => getAssignedUsersApi(id),
   );
 
-  const { data: allUsersData } = useSWR("exam-assign:all-users", () =>
-    getUsersApi({ page: 1, limit: 1000 }),
+  const debouncedSearch = useDebounce(searchText, 350);
+
+  const { data: allUsersData, isLoading: isSearching } = useSWR(
+    modalOpen ? ["exam-assign:search-users", debouncedSearch] : null,
+    ([, search]) => getUsersApi({ page: 1, limit: 20, search: search || undefined }),
   );
 
   const assignedIds = new Set((assignedUsers ?? []).map((u) => u.id));
@@ -81,6 +86,7 @@ export default function ExamAssignPage() {
       messageApi.success(`Đã gán ${selectedUserIds.length} người dùng`);
       setSelectedUserIds([]);
       setModalOpen(false);
+      setSearchText("");
       await mutateAssigned();
     } catch (err) {
       messageApi.error(getApiErrorMessage(err));
@@ -174,7 +180,6 @@ export default function ExamAssignPage() {
                 type="primary"
                 icon={<PlusOutlined />}
                 onClick={() => setModalOpen(true)}
-                disabled={userOptions.length === 0}
               >
                 Gán người dùng
               </Button>
@@ -210,6 +215,7 @@ export default function ExamAssignPage() {
         onCancel={() => {
           setModalOpen(false);
           setSelectedUserIds([]);
+          setSearchText("");
         }
         }
         onOk={() => void handleAssign()}
@@ -231,7 +237,10 @@ export default function ExamAssignPage() {
             value={selectedUserIds}
             onChange={setSelectedUserIds}
             showSearch
-            optionFilterProp="label"
+            filterOption={false}
+            onSearch={setSearchText}
+            loading={isSearching}
+            notFoundContent={isSearching ? "Đang tìm..." : "Không tìm thấy người dùng"}
             maxTagCount="responsive"
           />
           {selectedUserIds.length > 0 && (

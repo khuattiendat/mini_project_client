@@ -66,7 +66,8 @@ export default function ExamAssignPage() {
 
   const { data: allUsersData, isLoading: isSearching } = useSWR(
     modalOpen ? ["exam-assign:search-users", debouncedSearch] : null,
-    ([, search]) => getUsersApi({ page: 1, limit: 20, search: search || undefined }),
+    ([, search]) =>
+      getUsersApi({ page: 1, limit: 20, search: search || undefined }),
   );
 
   const assignedIds = new Set((assignedUsers ?? []).map((u) => u.id));
@@ -112,7 +113,11 @@ export default function ExamAssignPage() {
       key: "user",
       render: (_, record) => (
         <Space size={10}>
-          <Avatar size={32} icon={<UserOutlined />} style={{ background: "#6366f1" }} />
+          <Avatar
+            size={32}
+            icon={<UserOutlined />}
+            style={{ background: "#6366f1" }}
+          />
           <div>
             <Text strong>{record.fullName}</Text>
             <div className="text-xs text-slate-400">@{record.userName}</div>
@@ -157,12 +162,10 @@ export default function ExamAssignPage() {
         {/* Header */}
         <div className="mb-6">
           <Link to={`/admin/exams`}>
-
             <Button icon={<ArrowLeftOutlined />} className="mb-3">
               Quay lại danh sách đề thi
             </Button>
           </Link>
-
 
           {isExamLoading ? (
             <Skeleton active paragraph={{ rows: 1 }} title={{ width: 300 }} />
@@ -202,22 +205,24 @@ export default function ExamAssignPage() {
             dataSource={assignedUsers}
             size="middle"
             bordered
-            pagination={{ pageSize: 10, showTotal: (t) => `Tổng ${t} người dùng` }}
+            pagination={{
+              pageSize: 10,
+              showTotal: (t) => `Tổng ${t} người dùng`,
+            }}
             className="overflow-hidden rounded-md"
           />
         )}
-      </Card >
+      </Card>
 
       {/* Assign modal */}
-      < Modal
+      <Modal
         title="Gán người dùng vào đề thi"
         open={modalOpen}
         onCancel={() => {
           setModalOpen(false);
           setSelectedUserIds([]);
           setSearchText("");
-        }
-        }
+        }}
         onOk={() => void handleAssign()}
         confirmLoading={submitting}
         okText="Gán"
@@ -240,7 +245,9 @@ export default function ExamAssignPage() {
             filterOption={false}
             onSearch={setSearchText}
             loading={isSearching}
-            notFoundContent={isSearching ? "Đang tìm..." : "Không tìm thấy người dùng"}
+            notFoundContent={
+              isSearching ? "Đang tìm..." : "Không tìm thấy người dùng"
+            }
             maxTagCount="responsive"
           />
           {selectedUserIds.length > 0 && (
@@ -249,7 +256,7 @@ export default function ExamAssignPage() {
             </p>
           )}
         </div>
-      </Modal >
+      </Modal>
     </>
   );
 }

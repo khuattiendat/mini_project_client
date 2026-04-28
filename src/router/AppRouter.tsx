@@ -21,6 +21,7 @@ const ExamAssignPage = lazy(() => import("../pages/admin/ExamAssignPage"));
 const UnauthorizedPage = lazy(() => import("../pages/common/UnauthorizedPage"));
 const UserHomePage = lazy(() => import("../pages/user/UserHomePage"));
 const UserHistoryPage = lazy(() => import("../pages/user/UserHistoryPage"));
+const ExamTakingPage = lazy(() => import("../pages/user/ExamTakingPage"));
 
 function PageLoader() {
   return (
@@ -73,6 +74,7 @@ export default function AppRouter() {
           <Route path="/user" element={<UserLayout />}>
             <Route index element={<UserHomePage />} />
             <Route path="history" element={<UserHistoryPage />} />
+            <Route path="exam" element={<ExamTakingPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="change-password" element={<ChangePasswordPage />} />
           </Route>

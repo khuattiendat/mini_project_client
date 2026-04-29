@@ -2,11 +2,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Modal } from "antd";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
-import { submitAttemptApi, getAttemptByExamApi, pingAttemptApi } from "../../../../api/attemptApi";
+import {
+  submitAttemptApi,
+  getAttemptByExamApi,
+  pingAttemptApi,
+  lockAttemptApi,
+} from "../../../../api/attemptApi";
 import type { AttemptDetail, AnswerItem } from "../../../../types/attempt";
 import { getApiErrorMessage } from "../../../../api/apiError";
-import { useExamGuard } from "./useExamGuard";
-import { useAutoSave } from "./useAutoSave";
+import { useExamGuard, type LockViolationType } from "./useExamGuard";
+import { useAutoSave, loadSavedAnswers, clearSavedAnswers } from "./useAutoSave";
 import { useNetworkStatus } from "./useNetworkStatus";
 
 export interface ExamResult {
@@ -14,6 +19,8 @@ export interface ExamResult {
   correct: number;
   total: number;
 }
+
+const PENDING_SUBMIT_KEY = "exam_pending_submit_";
 
 export function useExamTaking() {
   const [searchParams] = useSearchParams();
@@ -28,45 +35,84 @@ export function useExamTaking() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [result, setResult] = useState<ExamResult | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [pendingOfflineSubmit, setPendingOfflineSubmit] = useState(false);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startedRef = useRef(false);
   const detailRef = useRef<AttemptDetail | null>(null);
   const answersRef = useRef<Record<number, number>>({});
-  const submittingRef = useRef(false); // guard chống duplicate submit
+  const submittingRef = useRef(false);
+  const lockedRef = useRef(false); // guard: tránh lock nhiều lần
 
   const PING_INTERVAL_MS = 30_000;
 
-  // Sync refs để dùng trong callbacks mà không bị stale closure
   useEffect(() => { detailRef.current = detail; }, [detail]);
   useEffect(() => { answersRef.current = answers; }, [answers]);
 
-  const onViolation = useCallback((type: string) => {
+  // ── Guard callbacks ────────────────────────────────────────────────────────
+
+  const onLock = useCallback((type: LockViolationType, message?: string) => {
+    if (lockedRef.current) return;
+    lockedRef.current = true;
+
     const attempt = detailRef.current?.attempt;
     if (!attempt) return;
+
     const deviceId = localStorage.getItem("deviceId") ?? "";
-    // Fire-and-forget ping ngay khi vi phạm để server ghi log
-    pingAttemptApi(attempt.id, deviceId).then((res) => {
-      if (res.locked) {
-        clearTimer();
-        clearPing();
-        clearSaved(attempt.id);
-        setError(res.message ?? "Bài thi đã bị khóa.");
-      }
-    }).catch(() => {});
-    void type; // type sẽ được server tự detect qua ping
+    const LOCK_MESSAGES: Record<LockViolationType, string> = {
+      TAB_SWITCH: "Rời khỏi trang thi (chuyển tab hoặc thu nhỏ trình duyệt).",
+      DEV_TOOLS: "Mở công cụ phát triển (DevTools) trong khi thi.",
+      SCREENSHOT: "Sử dụng phím chụp màn hình trong khi thi.",
+      WINDOW_BLUR: "Chuyển sang ứng dụng khác trong khi thi (Alt+Tab).",
+      AUTOMATION: "Phát hiện công cụ tự động hóa trong khi thi.",
+    };
+
+    // Ưu tiên message chi tiết từ guard (có danh sách dấu hiệu), fallback về default
+    const logMessage = message ?? LOCK_MESSAGES[type] ?? `Vi phạm: ${type}`;
+
+    lockAttemptApi(attempt.id, deviceId, type, logMessage).catch(() => {});
+
+    clearTimer();
+    clearPing();
+    clearSavedAnswers(attempt.id);
+
+    const USER_MESSAGES: Record<LockViolationType, string> = {
+      TAB_SWITCH: "Bài thi đã bị khóa do rời khỏi trang thi. Vui lòng liên hệ giám thị.",
+      DEV_TOOLS: "Bài thi đã bị khóa do mở công cụ phát triển. Vui lòng liên hệ giám thị.",
+      SCREENSHOT: "Bài thi đã bị khóa do chụp màn hình. Vui lòng liên hệ giám thị.",
+      WINDOW_BLUR: "Bài thi đã bị khóa do chuyển sang ứng dụng khác. Vui lòng liên hệ giám thị.",
+      AUTOMATION: "Bài thi đã bị khóa do phát hiện công cụ tự động hóa. Vui lòng liên hệ giám thị.",
+    };
+    setError(USER_MESSAGES[type] ?? "Bài thi đã bị khóa do vi phạm quy chế thi. Vui lòng liên hệ giám thị.");
   }, []);
 
-  // Guard: fullscreen, tab switch, keyboard shortcuts
-  useExamGuard({
+  // Callback riêng cho COPY_PASTE vượt ngưỡng — ghi log đúng type lên server
+  const onCopyPasteLock = useCallback((message: string) => {
+    if (lockedRef.current) return;
+    lockedRef.current = true;
+
+    const attempt = detailRef.current?.attempt;
+    if (!attempt) return;
+
+    const deviceId = localStorage.getItem("deviceId") ?? "";
+
+    lockAttemptApi(attempt.id, deviceId, "COPY_PASTE", message).catch(() => {});
+
+    clearTimer();
+    clearPing();
+    clearSavedAnswers(attempt.id);
+    setError("Bài thi đã bị khóa do thực hiện sao chép / dán quá nhiều lần. Vui lòng liên hệ giám thị.");
+  }, []);
+
+  const { isFullscreen, enterFullscreen } = useExamGuard({
     active: !!detail && !result && !error,
-    onViolation,
+    onLock,
+    onCopyPasteLock,
   });
 
-  // Auto-save answers vào localStorage mỗi 5s
-  // active = false khi bài kết thúc/bị khóa/có lỗi → dừng save
-  const { loadSaved, clearSaved } = useAutoSave({
+  // ── Auto-save (chỉ active khi đang làm bài) ───────────────────────────────
+  useAutoSave({
     attemptId: detail?.attempt.id ?? null,
     answers,
     active: !!detail && !result && !error,
@@ -74,6 +120,25 @@ export function useExamTaking() {
 
   const { online } = useNetworkStatus();
 
+  // ── Retry pending submit khi có mạng lại ──────────────────────────────────
+  useEffect(() => {
+    if (!online || !pendingOfflineSubmit || !detailRef.current) return;
+    const attempt = detailRef.current;
+    setPendingOfflineSubmit(false);
+    submitAnswers(attempt, answersRef.current, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [online, pendingOfflineSubmit]);
+
+  // ── Kiểm tra pending submit khi mount ─────────────────────────────────────
+  useEffect(() => {
+    if (!detail) return;
+    const pendingKey = `${PENDING_SUBMIT_KEY}${detail.attempt.id}`;
+    if (localStorage.getItem(pendingKey)) {
+      setPendingOfflineSubmit(true);
+    }
+  }, [detail]);
+
+  // ── Init ───────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
@@ -84,7 +149,6 @@ export function useExamTaking() {
       return;
     }
 
-    // Ensure deviceId exists in localStorage
     let deviceId = localStorage.getItem("deviceId");
     if (!deviceId) {
       deviceId = crypto.randomUUID();
@@ -95,26 +159,24 @@ export function useExamTaking() {
       try {
         const detail = await getAttemptByExamApi(examId, deviceId!);
 
-        // Tính thời gian còn lại dựa vào startedAt từ server
-        // startedAt được reset mỗi khi vào trang làm bài
         const totalSeconds = detail.exam.duration * 60;
         const elapsed = detail.attempt.startedAt
           ? Math.floor((Date.now() - new Date(detail.attempt.startedAt).getTime()) / 1000)
           : 0;
         const remaining = Math.max(totalSeconds - elapsed, 0);
 
-        setTimeLeft(remaining);
-        setDetail(detail);
-
-        // Restore answers từ localStorage nếu có
-        const saved = loadSaved(detail.attempt.id);
+        // Restore answers từ localStorage TRƯỚC khi set detail
+        // để tránh race condition với useExamGuard
+        const saved = loadSavedAnswers(detail.attempt.id);
         if (saved && Object.keys(saved).length > 0) {
           setAnswers(saved);
           answersRef.current = saved;
         }
+
+        setTimeLeft(remaining);
+        setDetail(detail);
       } catch (err: any) {
-        const msg = getApiErrorMessage(err);
-        setError(msg);
+        setError(getApiErrorMessage(err));
       } finally {
         setLoading(false);
       }
@@ -125,7 +187,6 @@ export function useExamTaking() {
 
   // ── Countdown timer ────────────────────────────────────────────────────────
   useEffect(() => {
-    // Không start timer nếu chưa có detail, đã có kết quả, hoặc timeLeft = 0
     if (!detail || result || timeLeft <= 0) return;
 
     timerRef.current = setInterval(() => {
@@ -156,11 +217,11 @@ export function useExamTaking() {
         if (res.locked) {
           clearTimer();
           clearPing();
-          clearSaved(attemptId);
+          clearSavedAnswers(attemptId);
           setError(res.message ?? "Bài thi đã bị khóa.");
         }
       } catch {
-        // Bỏ qua lỗi mạng tạm thời, không dừng bài
+        // Bỏ qua lỗi mạng tạm thời
       }
     };
 
@@ -169,32 +230,13 @@ export function useExamTaking() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detail, result]);
 
-  // ── Warn before unload ─────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!detail || result) return;
-
-    const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      return "";
-    };
-
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [detail, result]);
-
   // ── Helpers ────────────────────────────────────────────────────────────────
   const clearTimer = () => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
   };
 
   const clearPing = () => {
-    if (pingRef.current) {
-      clearInterval(pingRef.current);
-      pingRef.current = null;
-    }
+    if (pingRef.current) { clearInterval(pingRef.current); pingRef.current = null; }
   };
 
   const submitAnswers = async (
@@ -202,27 +244,25 @@ export function useExamTaking() {
     currentAnswers: Record<number, number>,
     isTimeout = false,
   ) => {
-    // Guard: chặn duplicate submit từ timer hoặc manual cùng lúc
     if (submittingRef.current) return;
     submittingRef.current = true;
 
     clearTimer();
     clearPing();
     setSubmitting(true);
+
+    const pendingKey = `${PENDING_SUBMIT_KEY}${attemptDetail.attempt.id}`;
+
     try {
       const payload: AnswerItem[] = Object.entries(currentAnswers).map(
-        ([qId, cId]) => ({
-          questionId: Number(qId),
-          selectedChoiceId: cId,
-        }),
+        ([qId, cId]) => ({ questionId: Number(qId), selectedChoiceId: cId }),
       );
 
-      const res = await submitAttemptApi(attemptDetail.attempt.id, {
-        answers: payload,
-      });
+      const res = await submitAttemptApi(attemptDetail.attempt.id, { answers: payload });
 
-      // Xóa autosave sau khi submit thành công
-      clearSaved(attemptDetail.attempt.id);
+      clearSavedAnswers(attemptDetail.attempt.id);
+      localStorage.removeItem(pendingKey);
+      setPendingOfflineSubmit(false);
 
       setResult({
         score: res.score,
@@ -233,15 +273,25 @@ export function useExamTaking() {
       if (isTimeout) {
         Modal.info({
           title: "Đã hết thời gian",
-          content:
-            "Bài thi của bạn đã được tự động nộp do hết thời gian làm bài.",
+          content: "Bài thi của bạn đã được tự động nộp do hết thời gian làm bài.",
         });
       }
     } catch (err: any) {
       const msg = getApiErrorMessage(err) ?? "Nộp bài thất bại.";
-      // Xóa autosave khi có lỗi để tránh restore data cũ
-      clearSaved(attemptDetail.attempt.id);
-      setError(msg);
+
+      if (isTimeout && !navigator.onLine) {
+        localStorage.setItem(pendingKey, "1");
+        setPendingOfflineSubmit(true);
+        Modal.warning({
+          title: "Mất kết nối mạng",
+          content: "Hết giờ nhưng không thể nộp bài do mất mạng. Bài làm đã được lưu lại — hệ thống sẽ tự nộp khi có kết nối trở lại.",
+          okText: "Đã hiểu",
+        });
+      } else {
+        clearSavedAnswers(attemptDetail.attempt.id);
+        localStorage.removeItem(pendingKey);
+        setError(msg);
+      }
     } finally {
       setSubmitting(false);
       submittingRef.current = false;
@@ -251,7 +301,6 @@ export function useExamTaking() {
   const handleSubmit = (autoSubmit = false) => {
     if (!detail || submittingRef.current) return;
 
-    // Block submit khi mất mạng (trừ auto-submit timeout)
     if (!autoSubmit && !online) {
       Modal.warning({
         title: "Mất kết nối mạng",
@@ -264,10 +313,7 @@ export function useExamTaking() {
     const totalQuestions = detail.questions.length;
     const unansweredCount = totalQuestions - answeredCount;
 
-    if (autoSubmit) {
-      submitAnswers(detail, answers, true);
-      return;
-    }
+    if (autoSubmit) { submitAnswers(detail, answers, true); return; }
 
     if (answeredCount === 0) {
       Modal.warning({
@@ -293,16 +339,11 @@ export function useExamTaking() {
   };
 
   const handleGoBack = () => {
-    if (result) {
-      navigate("/user");
-      return;
-    }
-
+    if (result) { navigate("/user"); return; }
     Modal.confirm({
       title: "Xác nhận thoát",
       icon: <ExclamationCircleOutlined />,
-      content:
-        "Bạn có chắc chắn muốn thoát? Bài làm của bạn sẽ không được lưu.",
+      content: "Bạn có chắc chắn muốn thoát? Tiến trình làm bài sẽ không được lưu.",
       okText: "Thoát",
       okType: "danger",
       cancelText: "Ở lại",
@@ -328,6 +369,9 @@ export function useExamTaking() {
     result,
     online,
     currentIndex,
+    pendingOfflineSubmit,
+    isFullscreen,
+    enterFullscreen,
     setCurrentIndex,
     handleSubmit,
     handleGoBack,

@@ -4,9 +4,10 @@ import {
   FileTextOutlined,
   PlayCircleOutlined,
   ReloadOutlined,
-  WarningOutlined,
   StopOutlined,
+  WarningOutlined,
   SafetyCertificateOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import {
   Button,
@@ -30,31 +31,25 @@ import { getApiErrorMessage } from "../../api/apiError";
 
 const { Text } = Typography;
 
-const EXAM_RULES = [
-  {
-    icon: <StopOutlined className="text-red-500" />,
-    text: "Không được chuyển tab hoặc rời khỏi trang thi trong suốt quá trình làm bài.",
-  },
-  {
-    icon: <StopOutlined className="text-red-500" />,
-    text: "Không được sử dụng nhiều thiết bị để làm cùng một bài thi.",
-  },
-  {
-    icon: <StopOutlined className="text-red-500" />,
-    text: "Không được sao chép, chụp màn hình hoặc chia sẻ nội dung đề thi.",
-  },
-  {
-    icon: <StopOutlined className="text-red-500" />,
-    text: "Không được sử dụng tài liệu hoặc công cụ hỗ trợ bên ngoài.",
-  },
-  {
-    icon: <SafetyCertificateOutlined className="text-blue-500" />,
-    text: "Bài thi sẽ tự động nộp khi hết thời gian.",
-  },
-  {
-    icon: <SafetyCertificateOutlined className="text-blue-500" />,
-    text: "Mọi hành vi vi phạm sẽ bị ghi lại và bài thi sẽ bị khóa ngay lập tức.",
-  },
+// Hành vi bị khóa bài ngay lập tức
+const LOCK_RULES = [
+  "Chuyển tab, chuyển cửa sổ hoặc rời khỏi trang thi (Alt+Tab, Ctrl+Tab...)",
+  "Mở DevTools (F12, Ctrl+Shift+I/J/C)",
+  "Chụp màn hình (phím PrintScreen)",
+  "Đăng nhập và làm bài trên nhiều thiết bị cùng lúc",
+];
+
+// Hành vi bị cảnh báo (tối đa 3 lần, lần thứ 4 bị khóa)
+const WARN_RULES = [
+  "Sao chép (Ctrl+C), dán (Ctrl+V) hoặc cắt (Ctrl+X) nội dung",
+];
+
+// Thông tin hệ thống
+const SYSTEM_RULES = [
+  "Bài thi yêu cầu chế độ toàn màn hình trong suốt quá trình làm bài.",
+  "Bài thi sẽ tự động nộp khi hết thời gian, kể cả khi mất kết nối mạng.",
+  "Mọi hành vi vi phạm đều được ghi lại và lưu vào hệ thống.",
+  "Bài thi bị khóa sẽ không thể tiếp tục — vui lòng liên hệ giám thị.",
 ];
 
 export default function UserHomePage() {
@@ -110,21 +105,61 @@ export default function UserHomePage() {
             <span>Quy chế thi — Vui lòng đọc trước khi bắt đầu</span>
           </div>
         }
-        width={520}
+        width={560}
       >
-        <div className="space-y-3 py-2">
+        <div className="space-y-4 py-2">
           <Text className="text-slate-600">
-            Bằng cách nhấn <strong>"Bắt đầu thi"</strong>, bạn xác nhận đã đọc
-            và đồng ý tuân thủ toàn bộ quy chế dưới đây:
+            Bằng cách nhấn <strong>"Tôi đã hiểu, bắt đầu thi"</strong>, bạn xác nhận
+            đã đọc và đồng ý tuân thủ toàn bộ quy chế dưới đây.
           </Text>
-          <ul className="mt-3 space-y-2 pl-0" style={{ listStyle: "none" }}>
-            {EXAM_RULES.map((rule, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
-                <span className="mt-0.5 shrink-0">{rule.icon}</span>
-                <span>{rule.text}</span>
-              </li>
-            ))}
-          </ul>
+
+          {/* Hành vi bị khóa ngay */}
+          <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+            <div className="mb-2 flex items-center gap-1.5 font-semibold text-red-600">
+              <StopOutlined />
+              <span>Bị khóa bài ngay lập tức nếu:</span>
+            </div>
+            <ul className="space-y-1.5 pl-0" style={{ listStyle: "none" }}>
+              {LOCK_RULES.map((rule, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-red-700">
+                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
+                  <span>{rule}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Hành vi bị cảnh báo */}
+          <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
+            <div className="mb-2 flex items-center gap-1.5 font-semibold text-orange-600">
+              <ExclamationCircleOutlined />
+              <span>Cảnh báo (vi phạm 3 lần sẽ bị khóa bài):</span>
+            </div>
+            <ul className="space-y-1.5 pl-0" style={{ listStyle: "none" }}>
+              {WARN_RULES.map((rule, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-orange-700">
+                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
+                  <span>{rule}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Thông tin hệ thống */}
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+            <div className="mb-2 flex items-center gap-1.5 font-semibold text-blue-600">
+              <SafetyCertificateOutlined />
+              <span>Thông tin hệ thống:</span>
+            </div>
+            <ul className="space-y-1.5 pl-0" style={{ listStyle: "none" }}>
+              {SYSTEM_RULES.map((rule, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-blue-700">
+                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
+                  <span>{rule}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </Modal>
       {/* Header */}

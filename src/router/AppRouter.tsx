@@ -18,6 +18,7 @@ const UsersPage = lazy(() => import("../pages/admin/UsersPage"));
 const ProfilePage = lazy(() => import("../pages/admin/ProfilePage"));
 const ChangePasswordPage = lazy(() => import("../pages/admin/ChangePasswordPage"));
 const ExamAssignPage = lazy(() => import("../pages/admin/ExamAssignPage"));
+const ExamHistoryPage = lazy(() => import("../pages/admin/ExamHistoryPage"));
 const UnauthorizedPage = lazy(() => import("../pages/common/UnauthorizedPage"));
 const UserHomePage = lazy(() => import("../pages/user/UserHomePage"));
 const UserHistoryPage = lazy(() => import("../pages/user/UserHistoryPage"));
@@ -57,6 +58,7 @@ export default function AppRouter() {
             <Route index element={<AdminDashboardPage />} />
             <Route path="exams" element={<ExamsPage />} />
             <Route path="exams/:examId/assign" element={<ExamAssignPage />} />
+            <Route path="exams/:examId/history" element={<ExamHistoryPage />} />
             <Route path="exams/:examId/preview" element={<ExamPreviewPage />} />
             <Route path="exams/:examId/questions" element={<QuestionsPage />} />
             <Route path="exams/:examId/questions/new" element={<QuestionEditorPage />} />

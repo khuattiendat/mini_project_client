@@ -132,6 +132,19 @@ export function ExamsTable({
       ),
     },
     {
+      title: "Lịch sử thi",
+
+      key: "history",
+      width: 120,
+      render: (_, record) => (
+        <Link to={`/admin/exams/${record.id}/history`}>
+          <Button size="small" type="primary" block>
+            Xem chi tiết
+          </Button>
+        </Link>
+      ),
+    },
+    {
       title: "Hành động",
       key: "action",
       width: 90,

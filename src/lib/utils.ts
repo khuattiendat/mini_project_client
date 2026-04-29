@@ -1,13 +1,19 @@
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
 import "dayjs/locale/vi";
 
+dayjs.extend(utc);
+dayjs.extend(timezone);
 dayjs.locale("vi");
+
+const APP_TIMEZONE = "Asia/Ho_Chi_Minh";
 
 // ─── Date formatting ─────────────────────────────────────────────────────────
 
 export function formatDateTime(value: string | null | undefined): string {
   if (!value) return "—";
-  return dayjs(value).format("DD/MM/YYYY HH:mm");
+  return dayjs.utc(value).tz(APP_TIMEZONE).format("DD/MM/YYYY HH:mm");
 }
 
 // ─── HTML helpers ─────────────────────────────────────────────────────────────

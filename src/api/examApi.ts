@@ -5,6 +5,7 @@ import type {
   DashboardStats,
   DeleteExamResponse,
   ExamEnvelope,
+  ExamHistoryAttempt,
   ExamItem,
   ExamListParams,
   ExamListResponse,
@@ -84,6 +85,38 @@ export async function unassignUserApi(
 ): Promise<{ message: string }> {
   const { data } = await apiClient.delete<ExamEnvelope<{ message: string }>>(
     `/exams/${examId}/assigned-users/${userId}`,
+  );
+  return data.data;
+}
+
+// ─── Admin: Exam History ──────────────────────────────────────────────────────
+
+export async function getExamHistoryApi(examId: number, search?: string): Promise<ExamHistoryAttempt[]> {
+  const { data } = await apiClient.get<ExamEnvelope<ExamHistoryAttempt[]>>(
+    `/exams/${examId}/history`,
+    { params: search?.trim() ? { search: search.trim() } : undefined },
+  );
+  return data.data;
+}
+
+// ─── Admin: Attempt actions ───────────────────────────────────────────────────
+
+export async function adminResetAttemptApi(
+  examId: number,
+  userId: number,
+): Promise<{ id: number; attemptNo: number; status: string }> {
+  const { data } = await apiClient.post<ExamEnvelope<{ id: number; attemptNo: number; status: string }>>(
+    '/attempts/admin/reset',
+    { examId, userId },
+  );
+  return data.data;
+}
+
+export async function adminTerminateAttemptApi(
+  attemptId: number,
+): Promise<{ id: number; status: string }> {
+  const { data } = await apiClient.post<ExamEnvelope<{ id: number; status: string }>>(
+    `/attempts/${attemptId}/admin/terminate`,
   );
   return data.data;
 }

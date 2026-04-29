@@ -87,4 +87,27 @@ export interface UserAttempt {
   createdAt: string;
 }
 
+export interface ExamHistoryViolation {
+  id: number;
+  type: string;
+  metadata: Record<string, any> | null;
+  createdAt: string;
+}
+
+export interface ExamHistoryAttempt {
+  id: number;
+  attemptNo: number;
+  status: string;
+  startedAt: string | null;
+  submittedAt: string | null;
+  endedAt: string | null;
+  createdAt: string;
+  user: {
+    id: number;
+    userName: string;
+    fullName: string;
+  };
+  violations: ExamHistoryViolation[];
+}
+
 export type ExamEnvelope<T> = ApiEnvelope<T>;

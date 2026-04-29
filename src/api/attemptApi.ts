@@ -52,3 +52,16 @@ export async function pingAttemptApi(
   );
   return data.data;
 }
+
+export async function lockAttemptApi(
+  attemptId: number,
+  deviceId: string,
+  violationType: string,
+  message: string,
+): Promise<{ locked: boolean; status: string }> {
+  const { data } = await apiClient.post<AttemptEnvelope<{ locked: boolean; status: string }>>(
+    `/attempts/${attemptId}/lock`,
+    { device_id: deviceId, violation_type: violationType, message },
+  );
+  return data.data;
+}

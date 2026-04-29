@@ -1,64 +1,67 @@
 import { useEffect, useRef } from "react";
 
+const AUTOSAVE_KEY_PREFIX = "exam_autosave_";
+
+// ── Utility functions (dùng được ngoài hook) ──────────────────────────────
+
+export function getAutoSaveKey(attemptId: number) {
+  return `${AUTOSAVE_KEY_PREFIX}${attemptId}`;
+}
+
+/** Đọc answers đã lưu từ localStorage — gọi trực tiếp, không cần hook */
+export function loadSavedAnswers(attemptId: number): Record<number, number> | null {
+  try {
+    const raw = localStorage.getItem(getAutoSaveKey(attemptId));
+    if (!raw) return null;
+    return JSON.parse(raw) as Record<number, number>;
+  } catch {
+    return null;
+  }
+}
+
+/** Xóa answers đã lưu — gọi trực tiếp, không cần hook */
+export function clearSavedAnswers(attemptId: number) {
+  try {
+    localStorage.removeItem(getAutoSaveKey(attemptId));
+  } catch (err) {
+    console.error("[AutoSave] Failed to clear:", err);
+  }
+}
+
+// ── Hook ──────────────────────────────────────────────────────────────────
+
 interface UseAutoSaveOptions {
-  /** attemptId để tạo key unique */
   attemptId: number | null;
-  /** Answers hiện tại */
   answers: Record<number, number>;
   /** Chỉ save khi active = true */
   active: boolean;
-  /** Interval auto-save (ms) */
   interval?: number;
-  /** Callback khi save thành công (optional, để debug) */
-  onSave?: () => void;
 }
 
-const AUTOSAVE_KEY_PREFIX = "exam_autosave_";
-
-export function useAutoSave({
-  attemptId,
-  answers,
-  active,
-  interval = 5000,
-  onSave,
-}: UseAutoSaveOptions) {
+export function useAutoSave({ attemptId, answers, active, interval = 5000 }: UseAutoSaveOptions) {
   const saveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastSavedRef = useRef<string>("");
 
   useEffect(() => {
-    if (!attemptId) return;
+    if (!attemptId || !active) return;
 
-    const key = `${AUTOSAVE_KEY_PREFIX}${attemptId}`;
-
-    // Nếu không active → xóa localStorage và dừng
-    if (!active) {
-      try {
-        localStorage.removeItem(key);
-        lastSavedRef.current = "";
-      } catch (err) {
-        console.error("[AutoSave] Failed to clear on inactive:", err);
-      }
-      return;
-    }
+    const key = getAutoSaveKey(attemptId);
 
     const doSave = () => {
       const current = JSON.stringify(answers);
-      // Chỉ save nếu có thay đổi
       if (current !== lastSavedRef.current) {
         try {
           localStorage.setItem(key, current);
           lastSavedRef.current = current;
-          onSave?.();
         } catch (err) {
           console.error("[AutoSave] Failed to save:", err);
         }
       }
     };
 
-    // Save ngay lần đầu
+    // Save ngay lần đầu khi active
     doSave();
 
-    // Sau đó save định kỳ
     saveTimerRef.current = setInterval(doSave, interval);
 
     return () => {
@@ -66,37 +69,7 @@ export function useAutoSave({
         clearInterval(saveTimerRef.current);
         saveTimerRef.current = null;
       }
+      // KHÔNG xóa localStorage khi cleanup — data cần giữ lại khi reload
     };
-  }, [attemptId, answers, active, interval, onSave]);
-
-  // ── Helpers ────────────────────────────────────────────────────────────────
-
-  /**
-   * Load answers từ localStorage khi mount
-   */
-  const loadSaved = (attemptId: number): Record<number, number> | null => {
-    const key = `${AUTOSAVE_KEY_PREFIX}${attemptId}`;
-    try {
-      const raw = localStorage.getItem(key);
-      if (!raw) return null;
-      return JSON.parse(raw) as Record<number, number>;
-    } catch {
-      return null;
-    }
-  };
-
-  /**
-   * Xóa autosave data (gọi sau khi submit hoặc có lỗi)
-   */
-  const clearSaved = (attemptId: number) => {
-    const key = `${AUTOSAVE_KEY_PREFIX}${attemptId}`;
-    try {
-      localStorage.removeItem(key);
-      lastSavedRef.current = "";
-    } catch (err) {
-      console.error("[AutoSave] Failed to clear:", err);
-    }
-  };
-
-  return { loadSaved, clearSaved };
+  }, [attemptId, answers, active, interval]);
 }

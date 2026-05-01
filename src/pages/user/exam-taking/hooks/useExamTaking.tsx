@@ -107,6 +107,7 @@ export function useExamTaking() {
 
   const { isFullscreen, enterFullscreen } = useExamGuard({
     active: !!detail && !result && !error,
+    attemptId: detail?.attempt.id ?? null,
     onLock,
     onCopyPasteLock,
   });

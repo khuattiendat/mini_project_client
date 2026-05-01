@@ -8,6 +8,7 @@ import {
   WarningOutlined,
   SafetyCertificateOutlined,
   ExclamationCircleOutlined,
+  HourglassOutlined,
 } from "@ant-design/icons";
 import {
   Button,
@@ -33,23 +34,30 @@ const { Text } = Typography;
 
 // Hành vi bị khóa bài ngay lập tức
 const LOCK_RULES = [
-  "Chuyển tab, chuyển cửa sổ hoặc rời khỏi trang thi (Alt+Tab, Ctrl+Tab...)",
   "Mở DevTools (F12, Ctrl+Shift+I/J/C)",
   "Chụp màn hình (phím PrintScreen)",
-  "Đăng nhập và làm bài trên nhiều thiết bị cùng lúc",
+  "Phát hiện công cụ tự động hóa (Puppeteer, Selenium, headless browser...)",
+  "Đăng nhập từ thiết bị khác trong khi đang làm bài",
+];
+
+// Hành vi có thời gian ân hạn
+const GRACE_RULES = [
+  { label: "Chuyển tab hoặc thu nhỏ trình duyệt", grace: "3 giây để quay lại" },
+  { label: "Chuyển sang ứng dụng khác (Alt+Tab)", grace: "5 giây để quay lại" },
 ];
 
 // Hành vi bị cảnh báo (tối đa 3 lần, lần thứ 4 bị khóa)
 const WARN_RULES = [
-  "Sao chép (Ctrl+C), dán (Ctrl+V) hoặc cắt (Ctrl+X) nội dung",
+  "Sao chép (Ctrl+C), dán (Ctrl+V) hoặc cắt (Ctrl+X) — cả phím tắt lẫn chuột phải",
 ];
 
 // Thông tin hệ thống
 const SYSTEM_RULES = [
   "Bài thi yêu cầu chế độ toàn màn hình trong suốt quá trình làm bài.",
   "Bài thi sẽ tự động nộp khi hết thời gian, kể cả khi mất kết nối mạng.",
-  "Mọi hành vi vi phạm đều được ghi lại và lưu vào hệ thống.",
+  "Mọi hành vi vi phạm đều được ghi lại — kể cả vi phạm chưa dẫn đến khóa bài.",
   "Bài thi bị khóa sẽ không thể tiếp tục — vui lòng liên hệ giám thị.",
+  "Giám thị có thể chủ động kết thúc bài thi của bạn bất kỳ lúc nào.",
 ];
 
 export default function UserHomePage() {
@@ -124,6 +132,25 @@ export default function UserHomePage() {
                 <li key={i} className="flex items-start gap-2 text-sm text-red-700">
                   <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" />
                   <span>{rule}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Hành vi có grace period */}
+          <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
+            <div className="mb-2 flex items-center gap-1.5 font-semibold text-yellow-700">
+              <HourglassOutlined />
+              <span>Có thời gian ân hạn để quay lại — quá hạn sẽ bị khóa:</span>
+            </div>
+            <ul className="space-y-1.5 pl-0" style={{ listStyle: "none" }}>
+              {GRACE_RULES.map((rule, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-yellow-800">
+                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-yellow-500" />
+                  <span>
+                    {rule.label}{" "}
+                    <span className="font-medium text-yellow-700">({rule.grace})</span>
+                  </span>
                 </li>
               ))}
             </ul>

@@ -65,3 +65,33 @@ export async function lockAttemptApi(
   );
   return data.data;
 }
+
+/**
+ * Ghi log vi phạm lên server mà không thay đổi trạng thái bài thi.
+ * Dùng cho grace period violations và COPY_PASTE warnings.
+ * Trả về violationId để có thể resolve sau.
+ */
+export async function logViolationApi(
+  attemptId: number,
+  violationType: string,
+  message: string,
+  metadata?: Record<string, unknown>,
+): Promise<{ violationId: number }> {
+  const { data } = await apiClient.post<AttemptEnvelope<{ violationId: number }>>(
+    `/attempts/${attemptId}/violation-log`,
+    { violation_type: violationType, message, metadata },
+  );
+  return data.data;
+}
+
+/**
+ * Đánh dấu vi phạm đã được giải quyết (thí sinh quay lại trong grace period).
+ */
+export async function resolveViolationApi(
+  attemptId: number,
+  violationId: number,
+): Promise<void> {
+  await apiClient.post(
+    `/attempts/${attemptId}/violation-log/${violationId}/resolve`,
+  );
+}

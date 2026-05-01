@@ -95,11 +95,11 @@ const violationColumns: ColumnsType<ExamHistoryViolation> = [
       return (
         <div className="text-xs text-slate-600">
           {msg && <div className="mb-1">{msg}</div>}
-          {Object.keys(rest).length > 0 && (
+          {/* {Object.keys(rest).length > 0 && (
             <code className="rounded bg-slate-100 px-1 py-0.5 text-xs text-slate-500">
               {JSON.stringify(rest)}
             </code>
-          )}
+          )} */}
         </div>
       );
     },
@@ -458,6 +458,7 @@ export default function ExamHistoryPage() {
               pagination={false}
               bordered
               className="mt-2 rounded-md"
+              scroll={{x: "max-content"}}
             />
           ))}
       </Modal>

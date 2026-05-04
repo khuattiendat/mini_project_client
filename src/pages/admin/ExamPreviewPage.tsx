@@ -112,15 +112,15 @@ export default function ExamPreviewPage() {
       <div className="sticky top-0 z-10 border-b border-slate-200 bg-white shadow-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
           <div className="flex items-center gap-3">
-            <Button
-              icon={<ArrowLeftOutlined />}
-              size="small"
-              className="shrink-0"
-            >
-              <Link to={`/admin/exams/${normalizedExamId}/questions`}>
+            <Link to={`/admin/exams/${normalizedExamId}/questions`}>
+              <Button
+                icon={<ArrowLeftOutlined />}
+                size="small"
+                className="shrink-0"
+              >
                 Quay lại
-              </Link>
-            </Button>
+              </Button>
+            </Link>
 
             {isExamLoading ? (
               <Skeleton.Input active style={{ width: 240 }} />
